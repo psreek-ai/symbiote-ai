@@ -1,7 +1,7 @@
 <p align="center">
   <h1 align="center">🪸 Symbiote AI</h1>
   <p align="center"><strong>Autonomous partnership development for micro-SaaS companies.</strong></p>
-  <p align="center">Scout. Pitch. Verify. Repeat — no sales team required.</p>
+  <p align="center">Scout. Enrich. Pitch. Follow up. Verify. Repeat — no sales team required.</p>
 </p>
 
 <p align="center">
@@ -21,36 +21,40 @@
 
 ---
 
-Symbiote AI is a headless, three-stage pipeline that runs on a cron job and grows
+Symbiote AI is a headless, four-stage pipeline that runs on a cron job and grows
 your audience without ad spend. It finds micro-SaaS companies that share your target
-audience, writes a personalized cold email proposing a 1-to-1 exposure swap
-(newsletter cross-promotion or widget placement), sends it, and later confirms the
-placement appeared on the partner's site.
+audience, enriches each lead by scraping their site for founder names and contact
+emails, writes a hyper-personalised cold email proposing a 1-to-1 exposure swap,
+follows up automatically on non-replies, and later confirms the placement appeared
+on the partner's site.
 
-**No financial transactions. No sales team. No manual outreach.**
+**No financial transactions. No sales team. No manual outreach. CAN-SPAM compliant.**
 
 ```
 $ symbiote pipeline --profile "indie makers and solo developers"
 
-09:01:02 [INFO] [1/3] SCOUT
-09:01:04 [INFO]   + New lead: Pika Labs <https://pika.app>
-09:01:05 [INFO]   + New lead: Potion <https://potion.so>
-09:01:06 [INFO]   + New lead: Typefully <https://typefully.com>
-09:01:06 [INFO] Scout complete: 3 new lead(s).
+  ━━━━━━━━ Symbiote AI — Pipeline Run ━━━━━━━━
+  [1/4] SCOUT
+  ✓ Scout complete: 3 new lead(s).
 
-09:01:06 [INFO] [2/3] NEGOTIATE
-09:01:06 [INFO] DRY RUN mode — emails will be drafted and logged but NOT delivered.
-09:01:08 [INFO] Drafting email for 'Typefully' → team@typefully.com
-09:01:08 [INFO]   Subject: Quick audience swap idea — Typefully?
-09:01:09 [INFO]   Marked 'Typefully' as 'pitched'.
+  [2/4] ENRICH
+  ✓ Enrich complete: 3 lead(s) enriched.
 
-09:01:09 [INFO] [3/3] VERIFY
-09:01:11 [INFO]   VERIFIED: Backlink found: <a href='https://symbiote.ai/partner'>
+  [3/4] NEGOTIATE
+  ✓ Negotiate complete: 2 pitch(es).
 
-09:01:11 [INFO] ─────────── PIPELINE SUMMARY ───────────
-09:01:11 [INFO]          live: 1
-09:01:11 [INFO]       pitched: 2
-09:01:11 [INFO]       scouted: 0
+  [4/4] VERIFY
+  ✓ Verify complete: 1/3 placement(s) confirmed.
+
+  ╭─────────────────────────────╮
+  │     Pipeline Summary        │
+  │          live: 1            │
+  │   negotiating: 0            │
+  │       pitched: 2            │
+  │      enriched: 0            │
+  │       scouted: 0            │
+  │      declined: 0            │
+  ╰─────────────────────────────╯
 ```
 
 ---
@@ -58,36 +62,47 @@ $ symbiote pipeline --profile "indie makers and solo developers"
 ## Why Symbiote?
 
 - **Zero ad spend** — pure audience swaps; no financial transactions, ever
-- **Founder-quality copy** — Claude Sonnet writes emails that read human, not AI-generated
+- **Lead scoring** — each company gets a 0–100 quality signal before any email is sent
+- **Hyper-personalised copy** — Claude Sonnet hooks into the founder's name and tagline
+- **CAN-SPAM compliant** — unsubscribe link in every email, opt-out stored in DB
+- **Auto follow-up** — timed, LLM-written nudges for leads that went quiet
+- **Reply detection** — inbound webhook classifies intent and updates pipeline status automatically
 - **Safe by default** — `DRY_RUN=true` until you explicitly flip the switch
-- **Cron-friendly** — each of the three stages runs independently; no server required
-- **Fully auditable** — every drafted email and its outcome lives in your local SQLite DB
-- **URL deduplication** — companies already in the pipeline are never re-scouted
+- **Cron-friendly** — each stage runs independently; no server required (except webhook)
+- **Rich terminal UI** — coloured status tables and progress spinners built in
+- **Fully auditable** — every email draft, score, and outcome lives in your local SQLite DB
 
 ---
 
 ## How it works
 
-Three agents coordinate through a shared SQLite database:
+Four agents coordinate through a shared SQLite database:
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│   Scout ──► leads.db ──► Negotiate ──► leads.db ──► Verify     │
-│     │                        │                        │         │
-│     │  Tavily web search      │  Claude Sonnet email   │  HTTP   │
-│     │  Claude Haiku extract   │  Resend delivery       │  check  │
-│     │                        │                        │         │
-│  status: scouted          status: pitched          status: live │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                                                              │
+│  Scout ──► Enrich ──► Negotiate ──► Verify                                  │
+│    │          │            │            │                                    │
+│    │  Tavily  │  Website   │  Claude    │  HTTP + BS4                        │
+│    │  search  │  scraper   │  Sonnet    │  placement                         │
+│    │  Claude  │  Lead      │  email     │  check                             │
+│    │  Haiku   │  scoring   │  Resend    │                                    │
+│    │          │            │            │                                    │
+│  scouted  enriched      pitched        live                                  │
+│                              │                                               │
+│                         Follow-up ◄── Webhook (inbound replies)             │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-| Stage | What it does | Models used |
+| Stage | What it does | Tools |
 |---|---|---|
-| **Scout** | Searches Tavily for matching companies, extracts structured data | Claude Haiku (fast extraction) |
-| **Negotiate** | Drafts a 3-sentence personalized pitch, delivers via Resend | Claude Sonnet (quality copy) |
-| **Verify** | Fetches the partner's site, checks for backlinks, images, iframes, or brand mentions | HTTP + BeautifulSoup |
+| **Scout** | Searches Tavily for matching companies, extracts structured data | Tavily + Claude Haiku |
+| **Enrich** | Visits homepage + about/contact pages, extracts emails, scores lead 0–100 | requests + BeautifulSoup |
+| **Negotiate** | Drafts a personalised pitch with founder hook, delivers via Resend | Claude Sonnet + Resend |
+| **Verify** | Fetches partner site, checks for backlinks, images, iframes, brand mentions | HTTP + BeautifulSoup |
+| **Follow-up** | Sends timed nudges to pitched leads that haven't replied | Claude Sonnet + Resend |
+| **Webhook** | Classifies inbound replies, handles CAN-SPAM unsubscribes | Flask + Claude Haiku |
 
 ---
 
@@ -99,7 +114,8 @@ git clone https://github.com/psreek-ai/symbiote-ai.git
 cd symbiote-ai
 
 # 2. Install (adds the `symbiote` CLI command)
-pip install -e ".[dev]"
+make install
+# or: pip install -e ".[dev]"
 
 # 3. Configure
 cp .env.example .env
@@ -108,10 +124,13 @@ cp .env.example .env
 # 4. Initialise the database
 python src/db.py
 
-# 5. Discover your first leads (dry run — nothing is sent)
+# 5. Discover and enrich leads (dry run — nothing is sent)
 symbiote scout --profile "productivity tools for remote teams"
-symbiote negotiate --dry-run
+symbiote enrich
 symbiote status
+
+# 6. When ready to pitch
+symbiote negotiate --send
 ```
 
 ---
@@ -119,12 +138,17 @@ symbiote status
 ## Commands
 
 ```bash
-symbiote scout      --profile "..."   # discover new leads via Tavily + Claude
-symbiote negotiate  --dry-run         # draft emails, log them, don't send
-symbiote negotiate  --send            # draft AND deliver via Resend
-symbiote verify                       # check partner sites for placement
-symbiote status                       # table view of the full pipeline
-symbiote pipeline   --profile "..."   # run all three stages in one command
+symbiote scout      --profile "..."    # discover new leads via Tavily + Claude
+symbiote enrich                        # scrape sites, score leads
+symbiote negotiate  --dry-run          # draft emails, log them, don't send
+symbiote negotiate  --send             # draft AND deliver via Resend
+symbiote followup   --dry-run          # draft follow-ups for quiet leads
+symbiote followup   --send             # send follow-ups
+symbiote verify                        # check partner sites for placement
+symbiote status                        # Rich colour-coded table of the pipeline
+symbiote export     --out leads.csv    # export all leads to CSV
+symbiote webhook    --port 8080        # start inbound email + unsubscribe server
+symbiote pipeline   --profile "..."    # run all four stages in one command
 ```
 
 Every command accepts `--help` for full option documentation.
@@ -132,9 +156,11 @@ Every command accepts `--help` for full option documentation.
 ### Cron setup
 
 ```cron
-# Scout daily at 08:00, pitch at 09:00, verify at 18:00
-0 8  * * * cd /path/to/symbiote-ai && venv/bin/symbiote scout
+# Scout + Enrich daily, pitch at 09:00, follow up at 10:00, verify at 18:00
+0 7  * * * cd /path/to/symbiote-ai && venv/bin/symbiote scout
+0 8  * * * cd /path/to/symbiote-ai && venv/bin/symbiote enrich
 0 9  * * * cd /path/to/symbiote-ai && venv/bin/symbiote negotiate --send
+0 10 * * * cd /path/to/symbiote-ai && venv/bin/symbiote followup  --send
 0 18 * * * cd /path/to/symbiote-ai && venv/bin/symbiote verify
 ```
 
@@ -155,6 +181,11 @@ Copy `.env.example` to `.env` and set the values below:
 | `DRY_RUN` | `true` | | Set `false` to actually deliver emails |
 | `SCOUT_MAX_RESULTS` | `5` | | Tavily results per search query |
 | `EMAIL_RATE_LIMIT_SECONDS` | `2.0` | | Pause between sends |
+| `MIN_LEAD_SCORE` | `40` | | Skip pitching leads scoring below this threshold |
+| `FOLLOWUP_DELAY_DAYS` | `5` | | Days after pitch before first follow-up |
+| `FOLLOWUP_MAX_COUNT` | `2` | | Maximum follow-up emails per lead |
+| `WEBHOOK_PORT` | `8080` | | Port for the inbound email + unsubscribe server |
+| `UNSUBSCRIBE_URL` | `http://localhost:8080/unsubscribe` | | Embedded in every outbound email |
 | `FAST_MODEL` | `claude-haiku-4-5` | | Model for structured extraction |
 | `SMART_MODEL` | `claude-sonnet-4-5` | | Model for email copy |
 
@@ -167,7 +198,9 @@ Every generated email enforces:
 - **3 sentences maximum:** hook → shared audience → casual CTA
 - **Tone:** casual, direct, founder-to-founder, 6th-grade reading level
 - **Banned:** money, compensation, equity, revenue share, corporate buzzwords
+- **CAN-SPAM footer:** every email includes a one-click unsubscribe link
 - **Fallback template** fires automatically if the LLM is unreachable — no lead is silently skipped
+- **Score gate:** leads below `MIN_LEAD_SCORE` are never pitched
 
 ---
 
@@ -175,6 +208,7 @@ Every generated email enforces:
 
 ```
 symbiote-ai/
+├── Makefile              make install / test / lint / db-reset
 ├── pyproject.toml        installable package + CLI entry point
 ├── requirements.txt      flat dependency list for pip install -r
 ├── LICENSE               MIT
@@ -184,15 +218,21 @@ symbiote-ai/
 │   ├── logger.py         console + daily file logging
 │   ├── db.py             SQLite schema, migrations, helpers
 │   ├── scout.py          Stage 1: Tavily search + Claude extraction
-│   ├── negotiate.py      Stage 2: Claude copy + Resend delivery
-│   ├── verify.py         Stage 3: HTTP placement verification
-│   ├── pipeline.py       orchestrator: Scout → Negotiate → Verify
-│   └── cli.py            Click-based CLI entry point
+│   ├── enricher.py       Stage 2: website scraper, email discovery, lead scoring
+│   ├── negotiate.py      Stage 3: Claude copy + Resend delivery
+│   ├── verify.py         Stage 4: HTTP placement verification
+│   ├── followup.py       Follow-up sequences for pitched leads
+│   ├── webhook.py        Inbound email intent classification + unsubscribe endpoint
+│   ├── pipeline.py       orchestrator: Scout → Enrich → Negotiate → Verify
+│   └── cli.py            Click-based CLI entry point (Rich terminal UI)
 ├── tests/
 │   ├── conftest.py
 │   ├── test_db.py
 │   ├── test_negotiate.py
-│   └── test_verify.py
+│   ├── test_verify.py
+│   ├── test_enricher.py
+│   ├── test_followup.py
+│   └── test_scout.py
 └── logs/                 auto-created; one log file per calendar day
 ```
 
@@ -201,11 +241,13 @@ symbiote-ai/
 ## Running tests
 
 ```bash
-pytest tests/ -v
+make test
+# or: pytest tests/ -v
 ```
 
-24 tests covering database migrations, deduplication, email drafting (LLM mocked),
-all four verification signal types, and HTTP retry behaviour.
+Tests cover database migrations, deduplication, email drafting (LLM mocked),
+enricher parsing, follow-up draft logic, all four verification signal types,
+and HTTP retry behaviour.
 
 ---
 
@@ -213,10 +255,10 @@ all four verification signal types, and HTTP retry behaviour.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Areas where help is most welcome:
 
-- **Follow-up sequences** — bump leads that haven't replied in N days
-- **Reply parsing** — detect positive/negative intent in incoming emails
 - **Postgres support** — swap the SQLite backend for production deployments
 - **Headless browser verification** — Playwright fallback for JS-rendered partner sites
+- **Dashboard** — a simple web UI to review and approve drafted emails before send
+- **CRM integrations** — push pipeline status to HubSpot, Notion, Airtable
 
 ---
 

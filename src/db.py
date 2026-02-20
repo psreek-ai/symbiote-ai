@@ -5,6 +5,7 @@ Key design choices:
 - Row factory so callers get dict-like access (row["column"])
 - insert_lead_if_new enforces URL-level deduplication
 - _add_column_if_missing makes every schema change idempotent/migration-safe
+- Indexes on status + pitched_at for common pipeline query patterns
 """
 
 import sqlite3
@@ -42,12 +43,30 @@ def init_db() -> None:
         )
     """)
 
-    # Additive migrations — safe to run on an existing DB from the original scaffold
+    # Additive migrations — safe to run on any existing DB version
     _add_column_if_missing(cursor, "companies", "email_subject",   "TEXT")
     _add_column_if_missing(cursor, "companies", "email_body",      "TEXT")
     _add_column_if_missing(cursor, "companies", "follow_up_count", "INTEGER NOT NULL DEFAULT 0")
     _add_column_if_missing(cursor, "companies", "pitched_at",      "TEXT")
     _add_column_if_missing(cursor, "companies", "verified_at",     "TEXT")
+
+    # Enricher additions
+    _add_column_if_missing(cursor, "companies", "score",        "INTEGER NOT NULL DEFAULT 0")
+    _add_column_if_missing(cursor, "companies", "enriched_at",  "TEXT")
+    _add_column_if_missing(cursor, "companies", "founder_name", "TEXT")
+
+    # CAN-SPAM / opt-out tracking
+    _add_column_if_missing(cursor, "companies", "opted_out_at", "TEXT")
+
+    # Indexes for common query patterns (idempotent)
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_companies_status "
+        "ON companies(status)"
+    )
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_companies_status_pitched "
+        "ON companies(status, pitched_at)"
+    )
 
     conn.commit()
     conn.close()
