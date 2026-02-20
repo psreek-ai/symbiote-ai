@@ -45,6 +45,30 @@ class Config:
     DRY_RUN: bool = os.environ.get("DRY_RUN", "true").lower() == "true"
 
     # ------------------------------------------------------------------ #
+    # Enricher settings                                                    #
+    # ------------------------------------------------------------------ #
+    # Leads scoring below this threshold are skipped by Negotiate
+    MIN_LEAD_SCORE: int = int(os.environ.get("MIN_LEAD_SCORE", "40"))
+
+    # ------------------------------------------------------------------ #
+    # Follow-up settings                                                   #
+    # ------------------------------------------------------------------ #
+    # Days of silence before sending follow-up #1 (and #2)
+    FOLLOWUP_DELAY_DAYS: int = int(os.environ.get("FOLLOWUP_DELAY_DAYS", "5"))
+    # Maximum number of follow-ups to send per lead before giving up
+    FOLLOWUP_MAX_COUNT: int = int(os.environ.get("FOLLOWUP_MAX_COUNT", "2"))
+
+    # ------------------------------------------------------------------ #
+    # Webhook / CAN-SPAM                                                   #
+    # ------------------------------------------------------------------ #
+    WEBHOOK_PORT: int = int(os.environ.get("WEBHOOK_PORT", "8080"))
+    # Full URL of your unsubscribe endpoint — appended with ?email=...
+    # Defaults to localhost for development; set to your public URL in production
+    UNSUBSCRIBE_URL: str = os.environ.get(
+        "UNSUBSCRIBE_URL", "http://localhost:8080/unsubscribe"
+    )
+
+    # ------------------------------------------------------------------ #
     # Model selection                                                      #
     # ------------------------------------------------------------------ #
     # Fast/cheap model for structured data extraction (scout)

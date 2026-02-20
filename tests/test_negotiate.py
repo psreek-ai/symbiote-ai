@@ -23,7 +23,7 @@ def test_draft_email_returns_subject_and_body():
     payload = json.dumps({"subject": "Quick collab idea?", "body": "Hey Acme, great tool. Our audiences overlap. Open to a swap?"})
     client = _make_client(payload)
 
-    subject, body = negotiate._draft_email(client, "Acme", "https://acme.com", "A dev tool")
+    subject, body = negotiate._draft_email(client, "Acme", "https://acme.com", "A dev tool", None)
 
     assert subject == "Quick collab idea?"
     assert "Acme" in body or "swap" in body.lower()
@@ -33,7 +33,7 @@ def test_draft_email_strips_markdown_fences():
     payload = "```json\n" + json.dumps({"subject": "Hey!", "body": "Three sentences here."}) + "\n```"
     client = _make_client(payload)
 
-    subject, body = negotiate._draft_email(client, "Acme", "https://acme.com", "")
+    subject, body = negotiate._draft_email(client, "Acme", "https://acme.com", "", None)
 
     assert subject == "Hey!"
     assert body == "Three sentences here."
@@ -45,7 +45,7 @@ def test_draft_email_falls_back_after_api_failure():
     client = MagicMock()
     client.messages.create.side_effect = anthropic.APIConnectionError(request=MagicMock())
 
-    subject, body = negotiate._draft_email(client, "Acme", "https://acme.com", "", retries=2)
+    subject, body = negotiate._draft_email(client, "Acme", "https://acme.com", "", None, retries=2)
 
     assert isinstance(subject, str) and len(subject) > 0
     assert isinstance(body, str) and len(body) > 0
@@ -55,7 +55,7 @@ def test_draft_email_falls_back_on_json_error():
     """Bad JSON from the LLM triggers immediate fallback (no retry loop)."""
     client = _make_client("this is not json at all")
 
-    subject, body = negotiate._draft_email(client, "Zeta", "https://zeta.io", "")
+    subject, body = negotiate._draft_email(client, "Zeta", "https://zeta.io", "", None)
 
     assert "Zeta" in subject or "Zeta" in body
 
