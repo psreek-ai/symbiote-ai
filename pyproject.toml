@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "symbiote-ai"
+version = "0.1.0"
+description = "Autonomous partnership development for micro-SaaS companies"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+keywords = ["saas", "partnerships", "ai", "automation", "business-development", "claude", "anthropic"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business",
+    "Topic :: Internet :: WWW/HTTP",
+]
+dependencies = [
+    "pydantic>=2.0",
+    "anthropic>=0.25.0",
+    "tavily-python>=0.3.0",
+    "resend>=0.7.0",
+    "python-dotenv>=1.0.0",
+    "click>=8.1.0",
+    "requests>=2.31.0",
+    "beautifulsoup4>=4.12.0",
+    "tabulate>=0.9.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0.0"]
+
+[project.scripts]
+# After `pip install -e .`, run the full CLI with just: symbiote <command>
+symbiote = "cli:cli"
+
+[project.urls]
+Homepage = "https://github.com/psreek-ai/symbiote-ai"
+"Bug Tracker" = "https://github.com/psreek-ai/symbiote-ai/issues"
+Changelog = "https://github.com/psreek-ai/symbiote-ai/releases"
+
+# ------------------------------------------------------------------ #
+# Package discovery                                                   #
+# ------------------------------------------------------------------ #
+[tool.setuptools]
+package-dir = { "" = "src" }
+# List every module in src/ so setuptools picks them all up
+py-modules = [
+    "cli",
+    "config",
+    "db",
+    "logger",
+    "negotiate",
+    "pipeline",
+    "scout",
+    "verify",
+]
+
+# ------------------------------------------------------------------ #
+# Test configuration                                                  #
+# ------------------------------------------------------------------ #
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]   # pytest 7+ automatically adds src/ to sys.path
+addopts   = "-v --tb=short"

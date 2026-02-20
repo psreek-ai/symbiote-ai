@@ -19,3 +19,8 @@ __pycache__/
 
 # Runtime logs (directory is tracked via logs/.gitkeep)
 logs/*.log
+
+# Python packaging artifacts
+*.egg-info/
+dist/
+build/
