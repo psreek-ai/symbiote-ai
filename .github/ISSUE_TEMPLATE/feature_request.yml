@@ -1,0 +1,45 @@
+name: Feature Request
+description: Suggest an improvement or new capability
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Got an idea? We'd love to hear it. Be as specific as possible — the best feature requests describe the problem, not just the solution.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the situation where you felt something was missing or painful.
+      placeholder: "When I try to target multiple audience profiles at once, I have to run scout separately for each one..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Describe the solution you'd like
+      placeholder: "A --profiles flag that accepts a comma-separated list, running scout for each profile in sequence..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered
+      description: Any workarounds you've tried or other approaches you thought about.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area of the product does this touch?
+      multiple: true
+      options:
+        - Scout (lead discovery)
+        - Negotiate (email drafting / delivery)
+        - Verify (placement detection)
+        - CLI / developer experience
+        - Database / data model
+        - Documentation
+        - Other

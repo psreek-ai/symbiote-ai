@@ -1,154 +1,200 @@
-# Symbiote AI
+<p align="center">
+  <h1 align="center">🪸 Symbiote AI</h1>
+  <p align="center"><strong>Autonomous partnership development for micro-SaaS companies.</strong></p>
+  <p align="center">Scout. Pitch. Verify. Repeat — no sales team required.</p>
+</p>
 
-**Autonomous partnership development for micro-SaaS companies.**
+<p align="center">
+  <a href="https://github.com/psreek-ai/symbiote-ai/actions/workflows/ci.yml">
+    <img src="https://github.com/psreek-ai/symbiote-ai/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
+  <a href="https://www.python.org/downloads/">
+    <img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="Python 3.11+">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License">
+  </a>
+  <a href="https://github.com/psreek-ai/symbiote-ai/issues">
+    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs Welcome">
+  </a>
+</p>
 
-Symbiote AI scouts non-competing products that share your audience, drafts personalized
-cold outreach proposing a 1-to-1 audience swap, and verifies the partnership placement
-once a deal is live — all without human intervention between runs.
+---
+
+Symbiote AI is a headless, three-stage pipeline that runs on a cron job and grows
+your audience without ad spend. It finds micro-SaaS companies that share your target
+audience, writes a personalized cold email proposing a 1-to-1 exposure swap
+(newsletter cross-promotion or widget placement), sends it, and later confirms the
+placement appeared on the partner's site.
+
+**No financial transactions. No sales team. No manual outreach.**
+
+```
+$ symbiote pipeline --profile "indie makers and solo developers"
+
+09:01:02 [INFO] [1/3] SCOUT
+09:01:04 [INFO]   + New lead: Pika Labs <https://pika.app>
+09:01:05 [INFO]   + New lead: Potion <https://potion.so>
+09:01:06 [INFO]   + New lead: Typefully <https://typefully.com>
+09:01:06 [INFO] Scout complete: 3 new lead(s).
+
+09:01:06 [INFO] [2/3] NEGOTIATE
+09:01:06 [INFO] DRY RUN mode — emails will be drafted and logged but NOT delivered.
+09:01:08 [INFO] Drafting email for 'Typefully' → team@typefully.com
+09:01:08 [INFO]   Subject: Quick audience swap idea — Typefully?
+09:01:09 [INFO]   Marked 'Typefully' as 'pitched'.
+
+09:01:09 [INFO] [3/3] VERIFY
+09:01:11 [INFO]   VERIFIED: Backlink found: <a href='https://symbiote.ai/partner'>
+
+09:01:11 [INFO] ─────────── PIPELINE SUMMARY ───────────
+09:01:11 [INFO]          live: 1
+09:01:11 [INFO]       pitched: 2
+09:01:11 [INFO]       scouted: 0
+```
+
+---
+
+## Why Symbiote?
+
+- **Zero ad spend** — pure audience swaps; no financial transactions, ever
+- **Founder-quality copy** — Claude Sonnet writes emails that read human, not AI-generated
+- **Safe by default** — `DRY_RUN=true` until you explicitly flip the switch
+- **Cron-friendly** — each of the three stages runs independently; no server required
+- **Fully auditable** — every drafted email and its outcome lives in your local SQLite DB
+- **URL deduplication** — companies already in the pipeline are never re-scouted
 
 ---
 
 ## How it works
 
-Three independent stages coordinate through a shared SQLite database:
+Three agents coordinate through a shared SQLite database:
 
 ```
-Scout ──► leads.db ──► Negotiate ──► leads.db ──► Verify ──► leads.db
-  │                        │                          │
-  │  Finds companies        │  Drafts + sends email    │  Confirms link/widget
-  │  via Tavily search      │  via Resend              │  live on partner site
-  └── status: scouted       └── status: pitched         └── status: live
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│   Scout ──► leads.db ──► Negotiate ──► leads.db ──► Verify     │
+│     │                        │                        │         │
+│     │  Tavily web search      │  Claude Sonnet email   │  HTTP   │
+│     │  Claude Haiku extract   │  Resend delivery       │  check  │
+│     │                        │                        │         │
+│  status: scouted          status: pitched          status: live │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-Each stage can be triggered independently (cron-friendly) or run together via
-the `pipeline` command.
+| Stage | What it does | Models used |
+|---|---|---|
+| **Scout** | Searches Tavily for matching companies, extracts structured data | Claude Haiku (fast extraction) |
+| **Negotiate** | Drafts a 3-sentence personalized pitch, delivers via Resend | Claude Sonnet (quality copy) |
+| **Verify** | Fetches the partner's site, checks for backlinks, images, iframes, or brand mentions | HTTP + BeautifulSoup |
 
 ---
 
-## Prerequisites
-
-- Python 3.11+
-- API keys for:
-  - [Anthropic](https://console.anthropic.com/) — LLM for extraction and email copy
-  - [Tavily](https://tavily.com/) — deep web search for lead discovery
-  - [Resend](https://resend.com/) — transactional email delivery (only needed for live sends)
-
----
-
-## Setup
+## Quick start
 
 ```bash
-# 1. Clone and enter the project
-git clone <repo-url> && cd symbiote-ai
+# 1. Clone
+git clone https://github.com/psreek-ai/symbiote-ai.git
+cd symbiote-ai
 
-# 2. Create a virtual environment
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+# 2. Install (adds the `symbiote` CLI command)
+pip install -e ".[dev]"
 
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. Configure environment
+# 3. Configure
 cp .env.example .env
-# Open .env and fill in ANTHROPIC_API_KEY, TAVILY_API_KEY, (RESEND_API_KEY)
+# Fill in ANTHROPIC_API_KEY and TAVILY_API_KEY at minimum
 
-# 5. Initialise the database
+# 4. Initialise the database
 python src/db.py
+
+# 5. Discover your first leads (dry run — nothing is sent)
+symbiote scout --profile "productivity tools for remote teams"
+symbiote negotiate --dry-run
+symbiote status
 ```
 
 ---
 
-## Usage
-
-All commands are available via the CLI entry point at `src/cli.py`.
-
-### Run individual stages
+## Commands
 
 ```bash
-# Stage 1 — discover leads
-python src/cli.py scout --profile "indie makers and solo developers" --max-results 10
-
-# Stage 2 — draft and preview emails (safe, no delivery)
-python src/cli.py negotiate --dry-run
-
-# Stage 2 — draft and deliver emails (requires RESEND_API_KEY + DRY_RUN=false in .env)
-python src/cli.py negotiate --send
-
-# Stage 3 — verify partner placements
-python src/cli.py verify
+symbiote scout      --profile "..."   # discover new leads via Tavily + Claude
+symbiote negotiate  --dry-run         # draft emails, log them, don't send
+symbiote negotiate  --send            # draft AND deliver via Resend
+symbiote verify                       # check partner sites for placement
+symbiote status                       # table view of the full pipeline
+symbiote pipeline   --profile "..."   # run all three stages in one command
 ```
 
-### Run the full pipeline in one command
+Every command accepts `--help` for full option documentation.
 
-```bash
-python src/cli.py pipeline --profile "solo SaaS founders" --dry-run
-```
-
-### Inspect the pipeline
-
-```bash
-python src/cli.py status
-python src/cli.py status --status-filter pitched
-```
-
-### Cron example (daily cadence)
+### Cron setup
 
 ```cron
-# Scout every day at 08:00, negotiate at 09:00, verify at 18:00
-0 8  * * * cd /path/to/symbiote-ai && venv/bin/python src/cli.py scout
-0 9  * * * cd /path/to/symbiote-ai && venv/bin/python src/cli.py negotiate --send
-0 18 * * * cd /path/to/symbiote-ai && venv/bin/python src/cli.py verify
+# Scout daily at 08:00, pitch at 09:00, verify at 18:00
+0 8  * * * cd /path/to/symbiote-ai && venv/bin/symbiote scout
+0 9  * * * cd /path/to/symbiote-ai && venv/bin/symbiote negotiate --send
+0 18 * * * cd /path/to/symbiote-ai && venv/bin/symbiote verify
 ```
 
 ---
 
-## Configuration reference
+## Configuration
 
-All values can be set as environment variables (or in `.env`):
+Copy `.env.example` to `.env` and set the values below:
 
-| Variable | Default | Description |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | — | Required. Powers extraction and email generation. |
-| `TAVILY_API_KEY` | — | Required. Powers web search for lead discovery. |
-| `RESEND_API_KEY` | — | Required for live sends. Safe to omit in dry-run mode. |
-| `SENDER_EMAIL` | `partnerships@symbiote.ai` | From address (must match a verified Resend domain). |
-| `SENDER_NAME` | `Head of Partnerships, Symbiote AI` | Display name in outbound emails. |
-| `SYMBIOTE_DOMAIN` | `symbiote.ai` | Domain the Verify stage looks for on partner sites. |
-| `DRY_RUN` | `true` | When `true`, emails are drafted and logged but never sent. |
-| `SCOUT_MAX_RESULTS` | `5` | Tavily results per search query. |
-| `EMAIL_RATE_LIMIT_SECONDS` | `2.0` | Pause between consecutive email sends. |
-| `FAST_MODEL` | `claude-haiku-4-5` | Model used for structured data extraction (Scout). |
-| `SMART_MODEL` | `claude-sonnet-4-5` | Model used for email copy generation (Negotiate). |
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `ANTHROPIC_API_KEY` | — | Yes | Powers extraction (Haiku) and email copy (Sonnet) |
+| `TAVILY_API_KEY` | — | Yes | Deep web search for lead discovery |
+| `RESEND_API_KEY` | — | For live sends | Transactional email delivery |
+| `SENDER_EMAIL` | `partnerships@symbiote.ai` | | From address (must match verified Resend domain) |
+| `SENDER_NAME` | `Head of Partnerships, Symbiote AI` | | Display name on outbound emails |
+| `SYMBIOTE_DOMAIN` | `symbiote.ai` | | Domain the Verify stage looks for on partner sites |
+| `DRY_RUN` | `true` | | Set `false` to actually deliver emails |
+| `SCOUT_MAX_RESULTS` | `5` | | Tavily results per search query |
+| `EMAIL_RATE_LIMIT_SECONDS` | `2.0` | | Pause between sends |
+| `FAST_MODEL` | `claude-haiku-4-5` | | Model for structured extraction |
+| `SMART_MODEL` | `claude-sonnet-4-5` | | Model for email copy |
 
 ---
 
-## Architecture decisions
+## Email guardrails
 
-### Why Claude instead of a cheaper model for email copy?
+Every generated email enforces:
 
-Partnership emails are read by real founders. The quality of the first sentence — the
-personalised hook — determines whether anyone reads further. Claude Sonnet consistently
-produces copy that sounds human and founder-to-founder, not AI-generated. Haiku handles
-the cheaper structured-extraction task in the Scout stage.
+- **3 sentences maximum:** hook → shared audience → casual CTA
+- **Tone:** casual, direct, founder-to-founder, 6th-grade reading level
+- **Banned:** money, compensation, equity, revenue share, corporate buzzwords
+- **Fallback template** fires automatically if the LLM is unreachable — no lead is silently skipped
 
-### Why SQLite?
+---
 
-SQLite is zero-ops for a single-machine deployment (the right starting point for a
-solo-founder tool). The schema is migration-safe via idempotent `ALTER TABLE` wrappers,
-so upgrading to Postgres later requires only swapping `get_connection()`.
+## Project layout
 
-### Why DRY_RUN defaults to true?
-
-Outbound cold email is irreversible. The default-safe posture ensures you always review
-the drafted copy (`negotiate --dry-run`) before flipping the switch.
-
-### Verify detection strategy
-
-The Verify stage uses four signals in descending confidence:
-1. `<a href>` pointing to our domain — direct backlink
-2. `<img src>` referencing our domain — logo/banner placement
-3. `<iframe src>` referencing our domain — widget embed
-4. Plain-text brand mention — softest signal, still worth tracking
+```
+symbiote-ai/
+├── pyproject.toml        installable package + CLI entry point
+├── requirements.txt      flat dependency list for pip install -r
+├── LICENSE               MIT
+├── CONTRIBUTING.md
+├── src/
+│   ├── config.py         all env-var backed configuration
+│   ├── logger.py         console + daily file logging
+│   ├── db.py             SQLite schema, migrations, helpers
+│   ├── scout.py          Stage 1: Tavily search + Claude extraction
+│   ├── negotiate.py      Stage 2: Claude copy + Resend delivery
+│   ├── verify.py         Stage 3: HTTP placement verification
+│   ├── pipeline.py       orchestrator: Scout → Negotiate → Verify
+│   └── cli.py            Click-based CLI entry point
+├── tests/
+│   ├── conftest.py
+│   ├── test_db.py
+│   ├── test_negotiate.py
+│   └── test_verify.py
+└── logs/                 auto-created; one log file per calendar day
+```
 
 ---
 
@@ -158,48 +204,22 @@ The Verify stage uses four signals in descending confidence:
 pytest tests/ -v
 ```
 
-The test suite covers:
-- Database initialisation and idempotent migrations (`test_db.py`)
-- URL-level deduplication
-- Email draft generation with mocked LLM calls (`test_negotiate.py`)
-- Fallback email template when the LLM is unavailable
-- HTML-based placement detection across all four signal types (`test_verify.py`)
-- Network retry behaviour in the Verify fetch layer
+24 tests covering database migrations, deduplication, email drafting (LLM mocked),
+all four verification signal types, and HTTP retry behaviour.
 
 ---
 
-## Project layout
+## Contributing
 
-```
-symbiote-ai/
-├── .env.example          environment variable template
-├── requirements.txt      pinned dependencies
-├── src/
-│   ├── config.py         centralised configuration and validation
-│   ├── logger.py         dual-output logging (console + daily log file)
-│   ├── db.py             SQLite schema, migrations, and helper functions
-│   ├── scout.py          Stage 1: lead discovery via Tavily + Claude
-│   ├── negotiate.py      Stage 2: email drafting + delivery via Resend
-│   ├── verify.py         Stage 3: HTTP-based placement verification
-│   ├── pipeline.py       orchestrates all three stages in sequence
-│   └── cli.py            Click-based command-line interface
-├── tests/
-│   ├── conftest.py       pytest path setup
-│   ├── test_db.py        database layer tests
-│   ├── test_negotiate.py email drafting tests
-│   └── test_verify.py    placement detection tests
-└── logs/                 auto-created; one log file per calendar day
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md). Areas where help is most welcome:
+
+- **Follow-up sequences** — bump leads that haven't replied in N days
+- **Reply parsing** — detect positive/negative intent in incoming emails
+- **Postgres support** — swap the SQLite backend for production deployments
+- **Headless browser verification** — Playwright fallback for JS-rendered partner sites
 
 ---
 
-## Email guardrails
+## License
 
-The Negotiate module enforces strict rules in every generated email:
-
-- **Never** mention money, compensation, equity, or revenue share
-- **Never** use corporate buzzwords (synergy, leverage, unlock, game-changing)
-- Body is capped at **3 sentences**: hook → shared audience → casual CTA
-- Tone: casual, direct, founder-to-founder, 6th-grade reading level
-
-These constraints live in the system prompt and are also enforced in the fallback template.
+[MIT](LICENSE) — use it, fork it, build your own BD machine.
